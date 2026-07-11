@@ -14,6 +14,9 @@ contracts/typechain-types/
 .env
 .env.local
 .env.*.local
+client/.env
+server/.env
+**/.env*
 
 # IDE and OS files
 .DS_Store

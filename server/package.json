@@ -1,0 +1,20 @@
+{
+    "name": "rundown-server",
+    "version": "1.0.0",
+    "description": "Simulation and audio relay systems for Rundown pursuits",
+    "main": "simulator.js",
+    "type": "module",
+    "scripts": {
+        "start": "node simulator.js",
+        "voice": "node voiceRelay.js"
+    },
+    "dependencies": {
+        "@anthropic-ai/sdk": "^0.20.0",
+        "@googlemaps/google-maps-services-js": "^3.4.0",
+        "@supabase/supabase-js": "^2.42.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "ws": "^8.16.0"
+    }
+}
