@@ -1,0 +1,198 @@
+:root {
+  /* HSL Neon Colors */
+  --bg-primary: 240 10% 3%;
+  --bg-secondary: 240 8% 8%;
+  --border-neon: 240 10% 18%;
+  
+  --neon-green: 145 100% 50%;      /* #00FF6A */
+  --neon-cyan: 186 100% 50%;       /* #00E5FF */
+  --neon-magenta: 329 100% 59%;    /* #FF2E9A */
+  --neon-amber: 38 100% 56%;       /* #FFB020 */
+  
+  --text-primary: 0 0% 98%;
+  --text-secondary: 240 5% 70%;
+  --text-muted: 240 4% 50%;
+  
+  --glow-green: 0 0 10px hsla(145, 100%, 50%, 0.5);
+  --glow-cyan: 0 0 10px hsla(186, 100%, 50%, 0.5);
+  --glow-magenta: 0 0 10px hsla(329, 100%, 59%, 0.5);
+  --glow-amber: 0 0 10px hsla(38, 100%, 56%, 0.5);
+
+  font-family: Inter, Roboto, system-ui, Helvetica, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  background-color: hsl(var(--bg-primary));
+  color: hsl(var(--text-primary));
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: hsl(var(--bg-primary));
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsla(0, 0%, 100%, 0.1);
+  border-radius: 3px;
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 8px currentColor); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); }
+}
+
+@keyframes scanlines {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+@keyframes holographic {
+  0% { opacity: 0.85; }
+  50% { opacity: 0.95; }
+  100% { opacity: 0.85; }
+}
+
+.hologram-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.hologram-effect::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 255, 106, 0.15) 50%
+  ), linear-gradient(
+    90deg, 
+    rgba(255, 0, 0, 0.06), 
+    rgba(0, 255, 0, 0.02), 
+    rgba(0, 0, 255, 0.06)
+  );
+  z-index: 2;
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Glass panel */
+.cyber-panel {
+  background: rgba(8, 8, 12, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border-neon));
+  border-radius: 8px;
+}
+
+.cyber-panel-green {
+  border-color: hsla(145, 100%, 50%, 0.3);
+  box-shadow: inset 0 0 8px hsla(145, 100%, 50%, 0.05);
+}
+
+.cyber-panel-green:hover {
+  border-color: hsla(145, 100%, 50%, 0.8);
+  box-shadow: 0 0 15px hsla(145, 100%, 50%, 0.2);
+}
+
+.cyber-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid currentColor;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cyber-btn-green {
+  color: hsl(var(--neon-green));
+}
+.cyber-btn-green:hover {
+  background: hsl(var(--neon-green));
+  color: black;
+  box-shadow: var(--glow-green);
+}
+
+.cyber-btn-cyan {
+  color: hsl(var(--neon-cyan));
+}
+.cyber-btn-cyan:hover {
+  background: hsl(var(--neon-cyan));
+  color: black;
+  box-shadow: var(--glow-cyan);
+}
+
+.cyber-btn-magenta {
+  color: hsl(var(--neon-magenta));
+}
+.cyber-btn-magenta:hover {
+  background: hsl(var(--neon-magenta));
+  color: black;
+  box-shadow: var(--glow-magenta);
+}
+
+.crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  transform: translate(-50%, -50%);
+  border: 2px solid hsl(var(--neon-green));
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: '';
+  position: absolute;
+  background: hsl(var(--neon-green));
+}
+
+.crosshair::before {
+  top: 18px;
+  left: -10px;
+  width: 60px;
+  height: 2px;
+}
+
+.crosshair::after {
+  left: 18px;
+  top: -10px;
+  height: 60px;
+  width: 2px;
+}

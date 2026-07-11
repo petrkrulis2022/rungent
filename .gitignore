@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+client/node_modules/
+contracts/node_modules/
+
+# Compilation / Build outputs
+client/dist/
+contracts/artifacts/
+contracts/cache/
+contracts/typechain/
+contracts/typechain-types/
+
+# Environment configurations
+.env
+.env.local
+.env.*.local
+
+# IDE and OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temp / Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.kiro/

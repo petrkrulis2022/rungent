@@ -1,0 +1,14 @@
+{
+  "name": "rundown-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts core for Rundown game",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.2"
+  }
+}
