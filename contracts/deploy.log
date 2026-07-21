@@ -1,0 +1,26 @@
+◇ injected env (1) from ../client/.env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from ../client/.env // tip: ⌘ suppress logs { quiet: true }
+Deploying contracts with account: 0x91200ecB46758413e4Ed3A0D2Cf13C853e2b8245
+Account balance: 96608231138934729
+
+--- Deploying MockERC20 (test USDC) ---
+MockERC20 (mUSDC) deployed to: 0xC05AC3E747dFFD6B9c6C2f8DC9E4cBCaaD7D9942
+
+--- Deploying LegCommit ---
+LegCommit deployed to: 0xa5B03c1177262807196179F2788201347f14d55A
+
+--- Deploying PrizeEscrow ---
+PrizeEscrow deployed to: 0xAa2122eD35640712AfC8dA3778cB3f73155df00C
+
+========================================
+   DEPLOYMENT COMPLETE - SEPOLIA
+========================================
+MockERC20 (mUSDC):  0xC05AC3E747dFFD6B9c6C2f8DC9E4cBCaaD7D9942
+LegCommit:          0xa5B03c1177262807196179F2788201347f14d55A
+PrizeEscrow:        0xAa2122eD35640712AfC8dA3778cB3f73155df00C
+========================================
+
+Add these to your client/.env:
+VITE_LEG_COMMIT_ADDR=0xa5B03c1177262807196179F2788201347f14d55A
+VITE_PRIZE_ESCROW_ADDR=0xAa2122eD35640712AfC8dA3778cB3f73155df00C
+VITE_MOCK_USDC_ADDR=0xC05AC3E747dFFD6B9c6C2f8DC9E4cBCaaD7D9942
