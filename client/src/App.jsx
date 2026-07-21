@@ -20,8 +20,10 @@ import {
 } from "lucide-react";
 import CameraView from "./components/CameraView";
 import AR3DScene from "./components/AR3DScene";
+import MapPicker from "./components/MapPicker";
 import { supabase, updateHunterLocation, fetchRungentTrail, subscribeToLegEvents } from "./services/supabaseClient";
-import { connectWallet, commitLegOnChain, fundEscrowContract } from "./services/contracts";
+import { connectWallet, commitLegOnChain, fundEscrowContract, LEG_COMMIT_ADDRESS } from "./services/contracts";
+import { keccak256, stringToHex } from "viem";
 
 const DEFAULT_LAT = 50.0755;
 const DEFAULT_LNG = 14.4378;
@@ -29,6 +31,7 @@ const DEFAULT_LNG = 14.4378;
 export default function App() {
     // Navigation: 'hunter' | 'admin' | 'instant'
     const [activeTab, setActiveTab] = useState("hunter");
+    const [placeMode, setPlaceMode] = useState("start"); // which pin a map-click sets
 
     // Web3 Connection State
     const [walletConnected, setWalletConnected] = useState(false);
@@ -85,6 +88,19 @@ export default function App() {
     const addLog = (text) => {
         setLogs((prev) => [`[${new Date().toLocaleTimeString()}] ${text}`, ...prev.slice(0, 15)]);
     };
+
+    // Random 32-byte identifier used as the on-chain legId
+    const randomBytes32 = () => {
+        const b = new Uint8Array(32);
+        crypto.getRandomValues(b);
+        return "0x" + Array.from(b).map((x) => x.toString(16).padStart(2, "0")).join("");
+    };
+
+    // Two-wallet firewall: the leg's deployer (Wallet A) cannot catch/shoot its own Rungent.
+    const isOwnerOfActiveLeg = () =>
+        !!activeLeg?.deployer_wallet &&
+        !!walletAddress &&
+        activeLeg.deployer_wallet.toLowerCase() === walletAddress.toLowerCase();
 
     // Real MetaMask Login using contracts service details
     const handleConnectWallet = async () => {
@@ -207,52 +223,73 @@ export default function App() {
         };
     }, [activeLeg]);
 
-    // Submit on-chain Leg creation parameters
+    // Submit on-chain Leg creation parameters (Wallet A = deployer/owner)
     const handleDeployLeg = async (e) => {
         e.preventDefault();
         if (!walletConnected) {
-            alert("Please connect wallet first.");
+            alert("Please connect Wallet A (the deployer) first.");
             return;
         }
 
         addLog("Forming on-chain rules payload...");
-        const legId = "0x" + Math.random().toString(16).substring(2, 10) + "00000000000000";
-        const rulesHash = "0x" + Math.random().toString(16).substring(2, 10) + "00000000000000"; // keccak signature
 
-        try {
-            addLog(`Sending tx to LegCommit contract at ${LEG_COMMIT_ADDRESS}...`);
+        // Real identifiers: random 32-byte legId + keccak256 rulesHash over the committed rules
+        const legId = randomBytes32();
+        const rulesHash = keccak256(
+            stringToHex(
+                JSON.stringify({
+                    name: adminForm.name,
+                    story: adminForm.story,
+                    start: [adminForm.startLat, adminForm.startLng],
+                    end: [adminForm.endLat, adminForm.endLng],
+                    skills: adminForm.skills,
+                    prize: adminForm.prizeAmount
+                })
+            )
+        );
 
-            // For demo, if contract addresses aren't deployed, we catch and log fallback values
-            // But we always execute the real clients call
-            let txHash = "0xMockTxHash";
-            if (LEG_COMMIT_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+        // 1) Attempt the on-chain commit. Non-fatal: the demo still runs off-chain via Supabase
+        //    even if the wallet is not the contract admin or no address is configured.
+        let txHash = null;
+        if (LEG_COMMIT_ADDRESS && LEG_COMMIT_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+            try {
+                addLog(`Signing LegCommit tx from ${walletAddress.slice(0, 6)}... at ${LEG_COMMIT_ADDRESS.slice(0, 8)}...`);
+                const escrowAddr = import.meta.env.VITE_PRIZE_ESCROW_ADDR || walletAddress;
                 const result = await commitLegOnChain(
                     legId,
                     rulesHash,
-                    walletAddress,
-                    walletAddress, // mockup payout
+                    walletAddress, // operating wallet
+                    escrowAddr,    // prize escrow
                     Math.floor(Date.now() / 1000),
                     Math.floor(Date.now() / 1000) + 3600
                 );
                 txHash = result.txHash;
+                addLog(`On-chain commit confirmed: ${txHash}`);
+            } catch (chainErr) {
+                console.error(chainErr);
+                addLog(`On-chain commit skipped (${chainErr.shortMessage || chainErr.message}). Continuing off-chain.`);
             }
+        } else {
+            addLog("No LegCommit address configured - deploying off-chain (Supabase only).");
+        }
 
-            addLog(`Contract commit tx hash: ${txHash}`);
-
-            // Push Leg parameters to Supabase
+        // 2) Always write the leg to Supabase so the simulator + hunters can run.
+        //    Records deployer_wallet = Wallet A (the owner) for the two-wallet firewall.
+        try {
             const { data: legRow, error: legErr } = await supabase
                 .from("legs")
                 .insert({
-                    id: undefined, // auto generate
                     name: adminForm.name,
                     story: adminForm.story,
+                    deployer_wallet: walletAddress,
                     start_lat: parseFloat(adminForm.startLat),
                     start_lng: parseFloat(adminForm.startLng),
                     end_lat: parseFloat(adminForm.endLat),
                     end_lng: parseFloat(adminForm.endLng),
                     prize_amount: parseFloat(adminForm.prizeAmount),
-                    status: "live", // Start the leg live
-                    prize_escrow_addr: "0xEscrowContractAddressMock"
+                    rules_hash: rulesHash,
+                    onchain_commit_tx: txHash,
+                    status: "live"
                 })
                 .select()
                 .single();
@@ -260,11 +297,12 @@ export default function App() {
             if (legErr) throw legErr;
 
             setActiveLeg(legRow);
-            addLog(`Leg "${legRow.name}" is now LIVE! Simulation engines tracking.`);
+            addLog(`Leg "${legRow.name}" is LIVE. You are the OWNER (${walletAddress.slice(0, 6)}...).`);
             setActiveTab("hunter");
         } catch (err) {
             console.error(err);
-            addLog(`Failed to commit Leg: ${err.message}`);
+            addLog(`Failed to write leg: ${err.message}`);
+            alert(`Deploy failed: ${err.message}`);
         }
     };
 
@@ -286,6 +324,12 @@ export default function App() {
     const handleTouchCatch = async () => {
         if (!walletConnected) {
             alert("Connecting wallet required to claim bounty.");
+            return;
+        }
+
+        if (isOwnerOfActiveLeg()) {
+            addLog("OWNER LOCK: you deployed this leg — you cannot catch/shoot your own Rungent.");
+            alert("You are the OWNER (deployer) of this leg. Connect a DIFFERENT wallet (Wallet B) to hunt.");
             return;
         }
 
@@ -336,6 +380,12 @@ export default function App() {
     const handleShoot = () => {
         if (!walletConnected) {
             alert("Connecting wallet required.");
+            return;
+        }
+
+        if (isOwnerOfActiveLeg()) {
+            addLog("OWNER LOCK: you deployed this leg — you cannot catch/shoot your own Rungent.");
+            alert("You are the OWNER (deployer) of this leg. Connect a DIFFERENT wallet (Wallet B) to hunt.");
             return;
         }
 
@@ -511,22 +561,55 @@ export default function App() {
                                         style={{ width: "100%", background: "#111", border: "1px solid #333", padding: "6px", color: "#fff", fontSize: "12px", minHeight: "40px" }}
                                     />
                                 </div>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                                    <div>
-                                        <label style={{ display: "block", fontSize: "9px", color: "#aaa" }}>Latitude Coordinates</label>
-                                        <input
-                                            type="text"
-                                            value={adminForm.startLat}
-                                            onChange={(e) => setAdminForm({ ...adminForm, startLat: e.target.value })}
-                                            style={{ width: "100%", background: "#111", border: "1px solid #333", padding: "4px", color: "#fff", fontSize: "11px" }}
-                                        />
+                                {/* Interactive start/end picker (Leaflet + OpenStreetMap, no API key) */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "9px", color: "#aaa", marginBottom: "4px" }}>
+                                        Route — click map or drag pins (<span style={{ color: "#00FF6A" }}>START</span> / <span style={{ color: "#FF2E9A" }}>END</span>)
+                                    </label>
+                                    <MapPicker
+                                        value={adminForm}
+                                        placeMode={placeMode}
+                                        setPlaceMode={setPlaceMode}
+                                        onChange={(patch) => setAdminForm((prev) => ({ ...prev, ...patch }))}
+                                    />
+                                    <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAdminForm((prev) => ({ ...prev, startLat: hunterGps.lat, startLng: hunterGps.lng }))}
+                                            className="cyber-btn cyber-btn-green"
+                                            style={{ fontSize: "9px", padding: "4px 6px", flex: 1 }}
+                                        >
+                                            START = MY GPS
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAdminForm((prev) => ({ ...prev, endLat: hunterGps.lat, endLng: hunterGps.lng }))}
+                                            className="cyber-btn cyber-btn-magenta"
+                                            style={{ fontSize: "9px", padding: "4px 6px", flex: 1 }}
+                                        >
+                                            END = MY GPS
+                                        </button>
                                     </div>
+                                    <div style={{ fontSize: "9px", color: "#888", marginTop: "4px", fontFamily: "monospace" }}>
+                                        S {Number(adminForm.startLat).toFixed(5)}, {Number(adminForm.startLng).toFixed(5)}  →  E {Number(adminForm.endLat).toFixed(5)}, {Number(adminForm.endLng).toFixed(5)}
+                                    </div>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                                     <div>
                                         <label style={{ display: "block", fontSize: "9px", color: "#aaa" }}>Prize Amount (USDC)</label>
                                         <input
                                             type="number"
                                             value={adminForm.prizeAmount}
                                             onChange={(e) => setAdminForm({ ...adminForm, prizeAmount: e.target.value })}
+                                            style={{ width: "100%", background: "#111", border: "1px solid #333", padding: "4px", color: "#fff", fontSize: "11px" }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "9px", color: "#aaa" }}>Skills</label>
+                                        <input
+                                            type="text"
+                                            value={adminForm.skills}
+                                            onChange={(e) => setAdminForm({ ...adminForm, skills: e.target.value })}
                                             style={{ width: "100%", background: "#111", border: "1px solid #333", padding: "4px", color: "#fff", fontSize: "11px" }}
                                         />
                                     </div>

@@ -13,9 +13,11 @@
         "@react-three/fiber": "^9.0.0-alpha.8",
         "@supabase/supabase-js": "^2.42.0",
         "@wagmi/core": "^2.6.15",
+        "leaflet": "^1.9.4",
         "lucide-react": "^0.363.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
+        "react-leaflet": "^5.0.0",
         "three": "^0.163.0",
         "viem": "^2.9.19"
     },
