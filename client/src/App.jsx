@@ -641,6 +641,23 @@ export default function App() {
                     {/* HUD widgets */}
                     {activeTab === "hunter" && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {isOwnerOfActiveLeg() && (
+                                <div
+                                    className="cyber-panel"
+                                    style={{
+                                        padding: "8px 14px",
+                                        textAlign: "center",
+                                        background: "rgba(0, 229, 255, 0.10)",
+                                        border: "1px solid hsl(var(--neon-cyan))",
+                                        color: "hsl(var(--neon-cyan))",
+                                        fontSize: "11px",
+                                        fontWeight: "bold",
+                                        letterSpacing: "1px"
+                                    }}
+                                >
+                                    ADMIN / OWNER — MONITOR · takedown disabled · inspect &amp; talk only
+                                </div>
+                            )}
                             {voiceConnected && voiceSubtitle && (
                                 <div
                                     className="cyber-panel hologram-effect"
@@ -669,7 +686,7 @@ export default function App() {
                 <footer style={{ pointerEvents: "auto", display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
 
                     {activeTab === "hunter" && (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", width: "100%", maxWidth: "600px", margin: "0 auto" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: isOwnerOfActiveLeg() ? "1fr" : "1fr 1fr 1fr", gap: "10px", width: "100%", maxWidth: "600px", margin: "0 auto" }}>
                             <button
                                 onClick={triggerVoiceChat}
                                 className="cyber-btn cyber-btn-green"
@@ -678,22 +695,26 @@ export default function App() {
                                 <PhoneCall size={16} /> {voiceConnected ? "HANG UP" : "VOICE OVERLINK"}
                             </button>
 
-                            <button
-                                onClick={handleTouchCatch}
-                                disabled={isCatching}
-                                className="cyber-btn cyber-btn-cyan"
-                                style={{ height: "44px" }}
-                            >
-                                <Target size={16} /> COLLISION CATCH
-                            </button>
+                            {!isOwnerOfActiveLeg() && (
+                                <>
+                                    <button
+                                        onClick={handleTouchCatch}
+                                        disabled={isCatching}
+                                        className="cyber-btn cyber-btn-cyan"
+                                        style={{ height: "44px" }}
+                                    >
+                                        <Target size={16} /> COLLISION CATCH
+                                    </button>
 
-                            <button
-                                onClick={handleShoot}
-                                className="cyber-btn cyber-btn-magenta"
-                                style={{ height: "44px" }}
-                            >
-                                <Crosshair size={16} /> PULSE NEUTRALIZE
-                            </button>
+                                    <button
+                                        onClick={handleShoot}
+                                        className="cyber-btn cyber-btn-magenta"
+                                        style={{ height: "44px" }}
+                                    >
+                                        <Crosshair size={16} /> PULSE NEUTRALIZE
+                                    </button>
+                                </>
+                            )}
                         </div>
                     )}
 
