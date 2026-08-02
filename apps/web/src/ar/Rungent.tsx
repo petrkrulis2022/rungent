@@ -13,6 +13,13 @@ const MODEL_URL = (import.meta.env.VITE_RUNGENT_MODEL_URL as string | undefined)
 /** Re-skin a downloaded model in the hologram shader instead of its own textures. */
 const HOLOGRAM_SKIN = import.meta.env.VITE_RUNGENT_HOLOGRAM === "1";
 const TARGET_HEIGHT_M = 1.8;
+/**
+ * Which way the model is authored to face. The scene treats -Z as forward, but
+ * exported characters commonly face +Z, which reads as walking backwards until
+ * the moment they pass the hunter and appear to spin round. Configurable
+ * because it is a property of the file, not of the game.
+ */
+const MODEL_YAW_DEG = Number(import.meta.env.VITE_RUNGENT_MODEL_YAW ?? 180);
 
 if (MODEL_URL) useGLTF.preload(MODEL_URL);
 
@@ -225,7 +232,7 @@ function GltfRunner({
   }, [actions, names, mode]);
 
   return (
-    <group ref={group} scale={scale}>
+    <group ref={group} scale={scale} rotation={[0, (MODEL_YAW_DEG * Math.PI) / 180, 0]}>
       <primitive object={scene} />
     </group>
   );
