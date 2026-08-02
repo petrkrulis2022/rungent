@@ -18,6 +18,13 @@ interface Props {
   /** Downward tilt of the camera, positive when looking down at the street. */
   pitchDeg: number;
   /**
+   * Place the Rungent straight ahead at its true distance instead of on its
+   * real bearing. Some handsets expose no orientation to the browser at all,
+   * leaving nothing to anchor a bearing against; distance and scale stay
+   * honest, only the direction is surrendered.
+   */
+  faceForward: boolean;
+  /**
    * Where the Rungent lands on screen, so the DOM can draw a marker for it.
    * At the far end of engagement range the figure is only a few pixels tall
    * and is effectively impossible to find by eye.
@@ -32,7 +39,7 @@ interface Props {
  * at identity, which makes screen-space raycasting (tap-to-interact, aim
  * reticle) straightforward.
  */
-function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, down, eyeHeightM, pitchDeg, onScreenPos, onTapRungent }: Props) {
+function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, down, eyeHeightM, pitchDeg, faceForward, onScreenPos, onTapRungent }: Props) {
   const worldRef = useRef<THREE.Group>(null);
   const pitchRef = useRef<THREE.Group>(null);
   const smoothPos = useRef<{ x: number; y: number; z: number } | null>(null);
@@ -41,7 +48,9 @@ function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, d
 
   const placement = rungent ? geoToScene(hunter, rungent, eyeHeightM) : null;
   const scenePos = placement
-    ? { x: placement.x, y: placement.y, z: placement.z }
+    ? faceForward
+      ? { x: 0, y: placement.y, z: -placement.distanceM }
+      : { x: placement.x, y: placement.y, z: placement.z }
     : null;
 
   useFrame(({ camera }, dt) => {
@@ -76,7 +85,7 @@ function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, d
       }
     }
     if (worldRef.current) {
-      const target = headingToWorldRotation(headingDeg);
+      const target = faceForward ? 0 : headingToWorldRotation(headingDeg);
       const cur = worldRef.current.rotation.y;
       const diff = ((target - cur + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
       // ease rather than snap; the heading is already low-pass filtered but

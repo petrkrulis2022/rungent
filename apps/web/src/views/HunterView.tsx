@@ -115,6 +115,20 @@ export function HunterView({ onBack, legId }: Props) {
   // load, so a stored value would be meaningless.
   const [refRel, setRefRel] = useState<number | null>(null);
 
+  // Whether to give up on bearings and simply put the Rungent ahead. Left
+  // undecided until the device has had a moment to prove it reports
+  // orientation at all, because a handset that reports none can only ever
+  // point the scene in one arbitrary direction.
+  const [frontMode, setFrontMode] = useState<boolean | null>(() => {
+    const v = localStorage.getItem("rundown.frontMode");
+    return v === null ? null : v === "1";
+  });
+  const chooseFrontMode = (on: boolean) => {
+    localStorage.setItem("rundown.frontMode", on ? "1" : "0");
+    setFrontMode(on);
+  };
+  const front = frontMode ?? false;
+
   const clearCamHeading = () => {
     localStorage.removeItem("rundown.camHeading");
     setManualHeading(null);
@@ -152,6 +166,14 @@ export function HunterView({ onBack, legId }: Props) {
       setRefRel(relHeading);
     }
   }, [manualHeading, refRel, relHeading]);
+
+  useEffect(() => {
+    if (frontMode !== null) return;
+    const t = setTimeout(() => {
+      setFrontMode(!hasHeading && relHeading === null);
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [frontMode, hasHeading, relHeading]);
 
   const lockStart = useRef<number | null>(null);
   const catchStart = useRef<number | null>(null);
@@ -362,6 +384,7 @@ export function HunterView({ onBack, legId }: Props) {
         down={rungent?.status === "down"}
         eyeHeightM={camHeight}
         pitchDeg={camPitch}
+        faceForward={front}
         onScreenPos={(p) => {
           setScreenPos(p);
           if (debugOn) setFrameTick((t) => t + 1);
@@ -453,6 +476,7 @@ export function HunterView({ onBack, legId }: Props) {
             `inRange  ${rungent?.in_range ?? "-"}`,
             `dist     ${rungent?.distance_m?.toFixed(0) ?? "-"} m`,
             `bearing  ${aimTarget ? Math.round(bearingDeg(hunterPos, aimTarget)) : "-"}`,
+            `view     ${front ? "FRONT" : "GEO"}`,
             `frames   ${frameTick}`,
             `marker   ${screenPos ? `${screenPos.xPct.toFixed(0)},${screenPos.yPct.toFixed(0)} ${screenPos.onScreen ? "on" : "off"}` : "null"}`,
           ].join("\n")}
@@ -507,6 +531,25 @@ export function HunterView({ onBack, legId }: Props) {
           onDown={() => setCamHeight(camHeight - 0.5)}
           onUp={() => setCamHeight(camHeight + 0.5)}
         />
+        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+          <span style={{ width: 30, color: "#8fa3a0", fontFamily: "monospace", fontSize: 10 }}>
+            VIEW
+          </span>
+          <button
+            style={{ ...calBtn, flex: 1, color: front ? "#8fa3a0" : "#00E5FF" }}
+            onClick={() => chooseFrontMode(false)}
+            title="Anchor the Rungent to its real compass bearing"
+          >
+            GEO
+          </button>
+          <button
+            style={{ ...calBtn, flex: 1, color: front ? "#00FF6A" : "#8fa3a0" }}
+            onClick={() => chooseFrontMode(true)}
+            title="Always place the Rungent straight ahead at its true distance"
+          >
+            FRONT
+          </button>
+        </div>
         <CalRow
           label="TILT"
           value={`${camPitch}\u00B0`}
