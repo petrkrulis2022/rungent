@@ -34,7 +34,20 @@ export function geoToScene(
 
   const x = east;
   const z = -north;
-  const y = (target.alt ?? 0) - (hunter.alt ?? 0) - eyeHeight;
+  // Only trust an altitude difference when both ends genuinely have one.
+  // Routes are stored without elevation, so the Rungent's altitude reads 0
+  // while a phone reports a real one -- subtracting the two buries the figure
+  // hundreds of metres underground. Treating an unknown altitude as the
+  // hunter's own ground level keeps it standing on the street until real
+  // elevation data exists.
+  const targetAlt = target.alt;
+  const hunterAlt = hunter.alt;
+  const bothKnown =
+    typeof targetAlt === "number" &&
+    targetAlt !== 0 &&
+    typeof hunterAlt === "number" &&
+    hunterAlt !== 0;
+  const y = (bothKnown ? targetAlt - hunterAlt : 0) - eyeHeight;
 
   return { x, y, z, distanceM: Math.hypot(east, north) };
 }

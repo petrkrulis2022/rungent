@@ -473,6 +473,7 @@ export function HunterView({ onBack, legId }: Props) {
             `rel/ref  ${relHeading?.toFixed(0) ?? "-"}/${refRel?.toFixed(0) ?? "-"}`,
             `using    ${Math.round(effectiveHeading)}`,
             `acc      ${sample?.accuracyM?.toFixed(0) ?? "-"} m`,
+            `alt      me ${sample?.alt?.toFixed(0) ?? "-"} / tgt ${rungent?.alt ?? "-"}`,
             `inRange  ${rungent?.in_range ?? "-"}`,
             `dist     ${rungent?.distance_m?.toFixed(0) ?? "-"} m`,
             `bearing  ${aimTarget ? Math.round(bearingDeg(hunterPos, aimTarget)) : "-"}`,
