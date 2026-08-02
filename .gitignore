@@ -7,3 +7,7 @@ dist
 artifacts
 cache
 typechain-types
+
+# Character assets are licensed separately from the code; keep them local
+# until their terms are settled rather than publishing them with a push.
+apps/web/public/models/*.glb

@@ -212,8 +212,12 @@ function GltfRunner({
 
     const action = actions[name];
     if (!action) return;
-    // a character that only ships a walk can still run, just faster
-    action.timeScale = mode === "run" && !runClip ? 1.8 : 1;
+    // Rigs often ship a single clip under an unhelpful name (Mixamo exports
+    // call it "mixamo.com"), so speed stands in for the missing ones: a walk
+    // replayed faster reads as a run, and frozen reads as idle. Without the
+    // freeze a downed Rungent would keep strolling.
+    const idleFallback = mode === "idle" && !find(["idle", "stand"]);
+    action.timeScale = idleFallback ? 0 : mode === "run" && !runClip ? 1.8 : 1;
     action.reset().fadeIn(0.2).play();
     return () => {
       action.fadeOut(0.2);
