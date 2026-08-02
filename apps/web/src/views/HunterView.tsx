@@ -78,7 +78,8 @@ interface Props {
 
 export function HunterView({ onBack, legId }: Props) {
   const { address, connecting, error: walletError, connect } = useWallet();
-  const { sample, permissionGranted, requestPermission, provider, hasHeading, geoError } = useGeo();
+  const { sample, permissionGranted, requestPermission, provider, hasHeading, relHeading, geoError } =
+    useGeo();
 
   const [leg, setLeg] = useState<any>(null);
   const [legErr, setLegErr] = useState<string | null>(null);
@@ -107,14 +108,21 @@ export function HunterView({ onBack, legId }: Props) {
     const v = localStorage.getItem("rundown.camHeading");
     return v === null ? null : Number(v);
   });
+  // Where the device's relative rotation stood when the heading was last
+  // pinned. Not persisted: the relative origin is reassigned on every page
+  // load, so a stored value would be meaningless.
+  const [refRel, setRefRel] = useState<number | null>(null);
+
   const clearCamHeading = () => {
     localStorage.removeItem("rundown.camHeading");
     setManualHeading(null);
+    setRefRel(null);
   };
   const setCamHeading = (deg: number) => {
     const d = ((deg % 360) + 360) % 360;
     localStorage.setItem("rundown.camHeading", String(d));
     setManualHeading(d);
+    setRefRel(relHeading);
   };
 
   // Height of the camera above the ground the Rungent walks on, and how far it
@@ -136,6 +144,12 @@ export function HunterView({ onBack, legId }: Props) {
     localStorage.setItem("rundown.camPitch", String(v));
     setCamPitchState(v);
   };
+
+  useEffect(() => {
+    if (manualHeading !== null && refRel === null && relHeading !== null) {
+      setRefRel(relHeading);
+    }
+  }, [manualHeading, refRel, relHeading]);
 
   const lockStart = useRef<number | null>(null);
   const catchStart = useRef<number | null>(null);
@@ -317,9 +331,18 @@ export function HunterView({ onBack, legId }: Props) {
       ? { lat: rungent.lat, lng: rungent.lng, alt: rungent.alt ?? 0 }
       : null;
 
-  // A calibrated heading always wins: a desktop "compass" reading is either
-  // absent or meaningless, and on a phone this lets the hunter correct drift.
-  const effectiveHeading = manualHeading ?? (hasHeading ? sample?.headingDeg ?? 0 : 0);
+  // A true compass wins where one exists. Otherwise a single calibration is
+  // carried forward on the device's relative rotation, which knows nothing of
+  // north but tracks turning accurately -- so the hunter pins the direction
+  // once and can then turn on the spot as they would with a real compass.
+  const effectiveHeading =
+    manualHeading === null
+      ? hasHeading
+        ? sample?.headingDeg ?? 0
+        : 0
+      : relHeading !== null && refRel !== null
+        ? (((manualHeading + (relHeading - refRel)) % 360) + 360) % 360
+        : manualHeading;
   const aimTarget = rungentPos ?? devPos;
 
   return (
@@ -416,6 +439,7 @@ export function HunterView({ onBack, legId }: Props) {
             `compass  ${hasHeading ? "yes" : "NO"}`,
             `raw hdg  ${sample?.headingDeg?.toFixed(0) ?? "-"}`,
             `manual   ${manualHeading ?? "-"}`,
+            `rel/ref  ${relHeading?.toFixed(0) ?? "-"}/${refRel?.toFixed(0) ?? "-"}`,
             `using    ${Math.round(effectiveHeading)}`,
             `acc      ${sample?.accuracyM?.toFixed(0) ?? "-"} m`,
             `inRange  ${rungent?.in_range ?? "-"}`,

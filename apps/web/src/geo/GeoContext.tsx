@@ -9,6 +9,7 @@ interface GeoContextValue {
   permissionGranted: boolean;
   requestPermission: () => Promise<boolean>;
   hasHeading: boolean;
+  relHeading: number | null;
   geoError: string | null;
 }
 
@@ -34,9 +35,10 @@ export function GeoProviderRoot({ children }: { children: ReactNode }) {
   const hasHeading =
     provider.kind === "mock" ? true : ((provider as any).hasHeading ?? false);
   const geoError = ((provider as any).lastError as string | null) ?? null;
+  const relHeading = ((provider as any).relHeading as number | null) ?? null;
 
   return (
-    <GeoContext.Provider value={{ provider, sample, permissionGranted, requestPermission, hasHeading, geoError }}>
+    <GeoContext.Provider value={{ provider, sample, permissionGranted, requestPermission, hasHeading, relHeading, geoError }}>
       {children}
     </GeoContext.Provider>
   );

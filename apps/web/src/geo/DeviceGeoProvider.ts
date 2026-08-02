@@ -17,6 +17,12 @@ export class DeviceGeoProvider implements GeoProvider {
   private smoothedHeading: number | null = null;
   private orientationHandler: ((e: DeviceOrientationEvent) => void) | null = null;
   public hasHeading = false;
+  /**
+   * Rotation relative to wherever the device started. Useless as a bearing,
+   * but it tracks turns accurately, so once the hunter has pinned one known
+   * direction it can carry the heading from there.
+   */
+  public relHeading: number | null = null;
   /** Why the last permission request failed, for display on a phone. */
   public lastError: string | null = null;
 
@@ -80,8 +86,17 @@ export class DeviceGeoProvider implements GeoProvider {
           : e.absolute && typeof e.alpha === "number"
             ? (360 - e.alpha) % 360
             : null;
-      if (heading === null) return;
+      if (heading === null) {
+        // No absolute bearing on this handset. Keep the relative rotation so a
+        // single calibration can still be carried through subsequent turns.
+        if (typeof e.alpha === "number") {
+          this.relHeading = (360 - e.alpha) % 360;
+          this.emit();
+        }
+        return;
+      }
       this.hasHeading = true;
+      this.relHeading = heading;
       this.smoothedHeading = lowPassHeading(this.smoothedHeading, heading);
       this.emit();
     };
