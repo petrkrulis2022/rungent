@@ -4,7 +4,7 @@ import { useGeo } from "../geo/GeoContext";
 import { MapPicker, type Pin } from "../components/MapPicker";
 import { planWalkingRoute, straightLineRoute, type PlannedRoutePoint } from "../lib/maps";
 import { createLeg, huntLinkFor, setLegStatus, getLegStatus } from "../lib/legs";
-import { haversineMeters } from "@rundown/shared";
+import { haversineMeters, WALK_KMH } from "@rundown/shared";
 
 interface Props {
   onBack: () => void;
@@ -145,6 +145,24 @@ export function DeployerView({ onBack }: Props) {
         />
       </div>
 
+      <div className="field" style={{ marginTop: 12 }}>
+        <label>Or paste coordinates — start lat,lng then end lat,lng</label>
+        <input
+          placeholder="50.647593, 13.836550  ->  50.646776, 13.835226"
+          onChange={(e) => {
+            // Dragging pins cannot reliably put a route on one particular
+            // street, which is what decides whether the Rungent walks past
+            // the hunter or straight at them.
+            const n = e.target.value.match(/-?\d+\.\d+/g)?.map(Number);
+            if (n && n.length >= 4) {
+              setStart({ lat: n[0], lng: n[1] });
+              setEnd({ lat: n[2], lng: n[3] });
+              setRoute(null);
+            }
+          }}
+        />
+      </div>
+
       <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
         <button className="primary-btn" onClick={handlePlanRoute} disabled={planning}>
           {planning ? "Planning..." : "Plan walking route"}
@@ -152,9 +170,10 @@ export function DeployerView({ onBack }: Props) {
         <span style={{ alignSelf: "center", fontSize: "0.8rem", color: "#8fa3a0" }}>
           straight line {straightLineM.toFixed(0)} m
           {route &&
-            ` / walking route ${routeLen.toFixed(0)} m / ~${((routeLen / 1000 / 6) * 60).toFixed(
-              0
-            )} min at 6 km/h`}
+            ` / walking route ${routeLen.toFixed(0)} m / ~${(
+              (routeLen / 1000 / WALK_KMH) *
+              60
+            ).toFixed(0)} min at ${WALK_KMH} km/h`}
         </span>
       </div>
 
