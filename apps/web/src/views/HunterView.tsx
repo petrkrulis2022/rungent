@@ -37,6 +37,40 @@ const calBtn: React.CSSProperties = {
   cursor: "pointer",
 };
 
+function CalRow({
+  label,
+  value,
+  onDown,
+  onUp,
+  extra,
+}: {
+  label: string;
+  value: string;
+  onDown: () => void;
+  onUp: () => void;
+  extra?: React.ReactNode;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+      <span style={{ width: 30, color: "#8fa3a0", fontFamily: "monospace", fontSize: 10 }}>
+        {label}
+      </span>
+      <button style={calBtn} onClick={onDown}>
+        &#8722;
+      </button>
+      <span
+        style={{ flex: 1, textAlign: "center", color: "#00E5FF", fontFamily: "monospace", fontSize: 11 }}
+      >
+        {value}
+      </span>
+      <button style={calBtn} onClick={onUp}>
+        +
+      </button>
+      {extra}
+    </div>
+  );
+}
+
 interface Props {
   onBack: () => void;
   legId?: string | null;
@@ -70,6 +104,26 @@ export function HunterView({ onBack, legId }: Props) {
     const d = ((deg % 360) + 360) % 360;
     localStorage.setItem("rundown.camHeading", String(d));
     setManualHeading(d);
+  };
+
+  // Height of the camera above the ground the Rungent walks on, and how far it
+  // tilts down. Shooting from an upstairs window is the common case and both
+  // differ wildly from the standing-in-the-street assumption of 1.6m/level.
+  const [camHeight, setCamHeightState] = useState<number>(
+    () => Number(localStorage.getItem("rundown.camHeight") ?? 1.6)
+  );
+  const [camPitch, setCamPitchState] = useState<number>(
+    () => Number(localStorage.getItem("rundown.camPitch") ?? 0)
+  );
+  const setCamHeight = (m: number) => {
+    const v = Math.max(0, Math.min(60, Math.round(m * 10) / 10));
+    localStorage.setItem("rundown.camHeight", String(v));
+    setCamHeightState(v);
+  };
+  const setCamPitch = (d: number) => {
+    const v = Math.max(-45, Math.min(60, Math.round(d)));
+    localStorage.setItem("rundown.camPitch", String(v));
+    setCamPitchState(v);
   };
 
   const lockStart = useRef<number | null>(null);
@@ -253,6 +307,8 @@ export function HunterView({ onBack, legId }: Props) {
         mode={(rungent?.mode as any) ?? "walk"}
         locked={locked}
         down={rungent?.status === "down"}
+        eyeHeightM={camHeight}
+        pitchDeg={camPitch}
         onTapRungent={() => setSpeech("You found me. That was the easy part.")}
       />
       <HUD
@@ -276,38 +332,47 @@ export function HunterView({ onBack, legId }: Props) {
         style={{
           position: "fixed",
           left: 12,
-          bottom: 88,
+          bottom: 60,
           zIndex: 26,
           width: 210,
           boxSizing: "border-box",
-          display: "flex",
-          gap: 6,
-          alignItems: "center",
           background: "rgba(7,9,12,0.9)",
           border: "1px solid #1e2b28",
           borderRadius: 8,
           padding: "6px 8px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
         }}
       >
-        <button style={calBtn} onClick={() => setCamHeading(effectiveHeading - 5)}>
-          &#9664;
-        </button>
-        <span
-          style={{ flex: 1, textAlign: "center", color: "#00E5FF", fontFamily: "monospace", fontSize: 11 }}
-        >
-          CAM {Math.round(effectiveHeading)}&deg;
-        </span>
-        <button style={calBtn} onClick={() => setCamHeading(effectiveHeading + 5)}>
-          &#9654;
-        </button>
-        <button
-          style={{ ...calBtn, color: aimTarget ? "#00FF6A" : "#3a4a47" }}
-          disabled={!aimTarget}
-          onClick={() => aimTarget && setCamHeading(bearingDeg(hunterPos, aimTarget))}
-          title="Point the camera at the Rungent, then press to calibrate"
-        >
-          AIM
-        </button>
+        <CalRow
+          label="CAM"
+          value={`${Math.round(effectiveHeading)}\u00B0`}
+          onDown={() => setCamHeading(effectiveHeading - 5)}
+          onUp={() => setCamHeading(effectiveHeading + 5)}
+          extra={
+            <button
+              style={{ ...calBtn, color: aimTarget ? "#00FF6A" : "#3a4a47" }}
+              disabled={!aimTarget}
+              onClick={() => aimTarget && setCamHeading(bearingDeg(hunterPos, aimTarget))}
+              title="Centre the Rungent in view, then press to calibrate"
+            >
+              AIM
+            </button>
+          }
+        />
+        <CalRow
+          label="HGT"
+          value={`${camHeight.toFixed(1)}m`}
+          onDown={() => setCamHeight(camHeight - 0.5)}
+          onUp={() => setCamHeight(camHeight + 0.5)}
+        />
+        <CalRow
+          label="TILT"
+          value={`${camPitch}\u00B0`}
+          onDown={() => setCamPitch(camPitch - 5)}
+          onUp={() => setCamPitch(camPitch + 5)}
+        />
       </div>
       <Minimap
         route={(leg?.route_polyline as any[]) ?? []}

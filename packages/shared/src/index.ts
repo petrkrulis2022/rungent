@@ -80,9 +80,12 @@ export interface CatchRecord {
 }
 
 // --- Geo constants shared between the AR client and the movement simulator ---
-export const ENGAGEMENT_RANGE_M = 75;
-export const CATCH_RANGE_M = 22;
-export const SHOOT_LOCK_RANGE_M = 70;
+// Deliberately short: the Rungent should appear close enough to read as a
+// person on the street rather than a speck at the edge of vision. Note this
+// sits near typical GPS error, so the approach can look jumpy.
+export const ENGAGEMENT_RANGE_M = 10;
+export const CATCH_RANGE_M = 5;
+export const SHOOT_LOCK_RANGE_M = 10;
 export const SHOOT_LOCK_MS = 1000;
 export const CATCH_HOLD_MS = 3000;
 // Doubled from real-world walking/running pace (6/10) so a demo does not

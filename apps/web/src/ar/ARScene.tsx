@@ -13,6 +13,10 @@ interface Props {
   mode: "idle" | "walk" | "run";
   locked: boolean;
   down: boolean;
+  /** Camera height above the ground the Rungent walks on. */
+  eyeHeightM: number;
+  /** Downward tilt of the camera, positive when looking down at the street. */
+  pitchDeg: number;
   onTapRungent: () => void;
 }
 
@@ -22,16 +26,21 @@ interface Props {
  * at identity, which makes screen-space raycasting (tap-to-interact, aim
  * reticle) straightforward.
  */
-function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, down, onTapRungent }: Props) {
+function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, down, eyeHeightM, pitchDeg, onTapRungent }: Props) {
   const worldRef = useRef<THREE.Group>(null);
+  const pitchRef = useRef<THREE.Group>(null);
   const smoothPos = useRef<{ x: number; y: number; z: number } | null>(null);
 
-  const placement = rungent ? geoToScene(hunter, rungent) : null;
+  const placement = rungent ? geoToScene(hunter, rungent, eyeHeightM) : null;
   const scenePos = placement
     ? { x: placement.x, y: placement.y, z: placement.z }
     : null;
 
   useFrame((_, dt) => {
+    if (pitchRef.current) {
+      // Tilting the world up is what a camera angled down at the street sees.
+      pitchRef.current.rotation.x = (pitchDeg * Math.PI) / 180;
+    }
     if (worldRef.current) {
       const target = headingToWorldRotation(headingDeg);
       const cur = worldRef.current.rotation.y;
@@ -52,19 +61,23 @@ function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, d
     smoothPos.current = null;
   }
 
+  // Pitch is applied outside heading so the two compose as tilt-after-turn
+  // rather than skewing the horizon as the hunter rotates.
   return (
-    <group ref={worldRef}>
-      <ambientLight intensity={0.6} />
-      {smoothPos.current && (
-        <Rungent
-          position={[smoothPos.current.x, smoothPos.current.y, smoothPos.current.z]}
-          headingDeg={rungentHeadingDeg}
-          mode={mode}
-          locked={locked}
-          down={down}
-          onTap={onTapRungent}
-        />
-      )}
+    <group ref={pitchRef}>
+      <group ref={worldRef}>
+        <ambientLight intensity={0.6} />
+        {smoothPos.current && (
+          <Rungent
+            position={[smoothPos.current.x, smoothPos.current.y, smoothPos.current.z]}
+            headingDeg={rungentHeadingDeg}
+            mode={mode}
+            locked={locked}
+            down={down}
+            onTap={onTapRungent}
+          />
+        )}
+      </group>
     </group>
   );
 }
