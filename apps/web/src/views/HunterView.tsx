@@ -102,6 +102,10 @@ export function HunterView({ onBack, legId }: Props) {
     const v = localStorage.getItem("rundown.camHeading");
     return v === null ? null : Number(v);
   });
+  const clearCamHeading = () => {
+    localStorage.removeItem("rundown.camHeading");
+    setManualHeading(null);
+  };
   const setCamHeading = (deg: number) => {
     const d = ((deg % 360) + 360) % 360;
     localStorage.setItem("rundown.camHeading", String(d));
@@ -346,6 +350,38 @@ export function HunterView({ onBack, legId }: Props) {
         onCatchEnd={handleCatchEnd}
       />
       <DownBurst active={burst} />
+      {new URLSearchParams(window.location.search).has("debug") && (
+        <pre
+          style={{
+            position: "fixed",
+            top: 54,
+            right: 8,
+            zIndex: 30,
+            margin: 0,
+            padding: "6px 8px",
+            background: "rgba(7,9,12,0.9)",
+            border: "1px solid #1e2b28",
+            borderRadius: 6,
+            color: "#8fa3a0",
+            font: "10px/1.45 monospace",
+            maxWidth: 190,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {[
+            `geo      ${provider.kind}`,
+            `perm     ${permissionGranted}`,
+            `compass  ${hasHeading ? "yes" : "NO"}`,
+            `raw hdg  ${sample?.headingDeg?.toFixed(0) ?? "-"}`,
+            `manual   ${manualHeading ?? "-"}`,
+            `using    ${Math.round(effectiveHeading)}`,
+            `acc      ${sample?.accuracyM?.toFixed(0) ?? "-"} m`,
+            `inRange  ${rungent?.in_range ?? "-"}`,
+            `dist     ${rungent?.distance_m?.toFixed(0) ?? "-"} m`,
+            `bearing  ${aimTarget ? Math.round(bearingDeg(hunterPos, aimTarget)) : "-"}`,
+          ].join("\n")}
+        </pre>
+      )}
       <div
         style={{
           position: "fixed",
@@ -369,14 +405,24 @@ export function HunterView({ onBack, legId }: Props) {
           onDown={() => setCamHeading(effectiveHeading - 5)}
           onUp={() => setCamHeading(effectiveHeading + 5)}
           extra={
-            <button
-              style={{ ...calBtn, color: aimTarget ? "#00FF6A" : "#3a4a47" }}
-              disabled={!aimTarget}
-              onClick={() => aimTarget && setCamHeading(bearingDeg(hunterPos, aimTarget))}
-              title="Centre the Rungent in view, then press to calibrate"
-            >
-              AIM
-            </button>
+            <>
+              <button
+                style={{ ...calBtn, color: aimTarget ? "#00FF6A" : "#3a4a47" }}
+                disabled={!aimTarget}
+                onClick={() => aimTarget && setCamHeading(bearingDeg(hunterPos, aimTarget))}
+                title="Centre the Rungent in view, then press to calibrate"
+              >
+                AIM
+              </button>
+              <button
+                style={{ ...calBtn, color: manualHeading === null ? "#3a4a47" : "#FFB020" }}
+                disabled={manualHeading === null}
+                onClick={clearCamHeading}
+                title="Hand heading back to the device compass"
+              >
+                AUTO
+              </button>
+            </>
           }
         />
         <CalRow
