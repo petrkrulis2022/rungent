@@ -1,0 +1,22 @@
+{
+  "name": "@rundown/rungent-ai",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "tsx src/runLeg.ts",
+    "autorun": "tsx src/autorun.ts"
+  },
+  "dependencies": {
+    "@rundown/shared": "workspace:*",
+    "@supabase/supabase-js": "^2.45.4",
+    "ws": "^8.21.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "~5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

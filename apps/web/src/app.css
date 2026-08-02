@@ -1,0 +1,164 @@
+:root {
+  --green: #00ff6a;
+  --cyan: #00e5ff;
+  --magenta: #ff2e9a;
+  --amber: #ffb020;
+  --near-black: #07090c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--near-black);
+  color: #e8fdf3;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.app-shell {
+  height: 100%;
+  position: relative;
+}
+
+.role-select {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.role-select h1 {
+  font-size: 2.5rem;
+  letter-spacing: 0.1em;
+  color: var(--green);
+  text-shadow: 0 0 12px var(--green);
+  margin: 0;
+}
+
+.tagline {
+  color: var(--cyan);
+  margin: 0 0 24px;
+}
+
+.role-buttons {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.role-buttons button {
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.role-buttons button:hover {
+  background: var(--cyan);
+  color: var(--near-black);
+  box-shadow: 0 0 16px var(--cyan);
+}
+
+.hint {
+  max-width: 420px;
+  color: #8fa3a0;
+  font-size: 0.85rem;
+  margin-top: 24px;
+}
+
+.view {
+  padding: 20px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.view h2 {
+  color: var(--green);
+}
+
+.back-link {
+  background: none;
+  border: none;
+  color: var(--cyan);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.field label {
+  font-size: 0.8rem;
+  color: #8fa3a0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.field input,
+.field textarea {
+  background: #10141a;
+  border: 1px solid #2a3138;
+  color: #e8fdf3;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+.primary-btn {
+  background: var(--green);
+  color: var(--near-black);
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.warn-banner {
+  background: rgba(255, 46, 154, 0.15);
+  border: 1px solid var(--magenta);
+  color: var(--magenta);
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-size: 0.75rem;
+}
+
+@keyframes burst {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
