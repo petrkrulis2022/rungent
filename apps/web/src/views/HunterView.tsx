@@ -309,6 +309,8 @@ export function HunterView({ onBack, legId }: Props) {
         down={rungent?.status === "down"}
         eyeHeightM={camHeight}
         pitchDeg={camPitch}
+        label={leg?.name ?? "RUNGENT"}
+        distanceM={rungent?.distance_m ?? null}
         onTapRungent={() => setSpeech("You found me. That was the easy part.")}
       />
       <HUD

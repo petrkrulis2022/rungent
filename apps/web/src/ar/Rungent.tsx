@@ -1,6 +1,6 @@
-import { useRef, useMemo, useEffect, Suspense } from "react";
+import { useRef, useMemo, useEffect, useState, Suspense } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useGLTF, useAnimations } from "@react-three/drei";
+import { useGLTF, useAnimations, Text, Billboard } from "@react-three/drei";
 import * as THREE from "three";
 
 /**
@@ -168,6 +168,8 @@ interface RungentProps {
   mode: "idle" | "walk" | "run";
   locked?: boolean;
   down?: boolean;
+  label?: string;
+  distanceM?: number | null;
   onTap?: () => void;
 }
 
@@ -238,8 +240,32 @@ function GltfRunner({
   );
 }
 
-export function Rungent({ position, headingDeg, mode, locked, down, onTap }: RungentProps) {
+export function Rungent({
+  position,
+  headingDeg,
+  mode,
+  locked,
+  down,
+  label,
+  distanceM,
+  onTap,
+}: RungentProps) {
   const groupRef = useRef<THREE.Group>(null);
+  const [hovered, setHovered] = useState(false);
+
+  // Nothing else on the AR canvas is interactive, so the pointer is the only
+  // hint that the figure can be tapped at all.
+  useEffect(() => {
+    document.body.style.cursor = hovered ? "pointer" : "default";
+    return () => {
+      document.body.style.cursor = "default";
+    };
+  }, [hovered]);
+
+  // Labels are sized in world units, so they would shrink into nothing at the
+  // far edge of engagement range. Growing them with distance keeps them legible
+  // and doubles as a marker for a Rungent too small to pick out by eye.
+  const labelScale = Math.max(1, (distanceM ?? 10) / 14);
   const material = useHologramMaterial(down ? "#FF2E9A" : "#00FF6A", locked ? "#FFB020" : "#00E5FF");
 
   useFrame((state, dt) => {
@@ -258,6 +284,10 @@ export function Rungent({ position, headingDeg, mode, locked, down, onTap }: Run
       // slight bob so it never looks frozen
       groupRef.current.position.y =
         position[1] + (down ? 0 : Math.sin(state.clock.elapsedTime * 2) * 0.02);
+      // a small swell on hover, so the tap target is obvious before committing
+      const targetScale = hovered ? 1.06 : 1;
+      const cs = groupRef.current.scale.x;
+      groupRef.current.scale.setScalar(cs + (targetScale - cs) * Math.min(1, dt * 8));
     }
   });
 
@@ -269,7 +299,39 @@ export function Rungent({ position, headingDeg, mode, locked, down, onTap }: Run
         e.stopPropagation();
         onTap?.();
       }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={() => setHovered(false)}
     >
+      <Billboard position={[0, 2.1, 0]} scale={labelScale}>
+        {distanceM != null && (
+          <Text
+            fontSize={0.24}
+            color={locked ? "#FFB020" : "#00E5FF"}
+            outlineWidth={0.03}
+            outlineColor="#07090c"
+            anchorX="center"
+            anchorY="middle"
+          >
+            {`${Math.round(distanceM)}m`}
+          </Text>
+        )}
+        {hovered && label && (
+          <Text
+            position={[0, 0.32, 0]}
+            fontSize={0.2}
+            color="#ffffff"
+            outlineWidth={0.03}
+            outlineColor="#07090c"
+            anchorX="center"
+            anchorY="middle"
+          >
+            {label}
+          </Text>
+        )}
+      </Billboard>
       <Suspense fallback={<ProceduralRunner material={material} mode={down ? "idle" : mode} />}>
         {MODEL_URL ? (
           <GltfRunner

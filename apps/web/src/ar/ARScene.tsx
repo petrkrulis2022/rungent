@@ -17,6 +17,8 @@ interface Props {
   eyeHeightM: number;
   /** Downward tilt of the camera, positive when looking down at the street. */
   pitchDeg: number;
+  label?: string;
+  distanceM?: number | null;
   onTapRungent: () => void;
 }
 
@@ -26,7 +28,7 @@ interface Props {
  * at identity, which makes screen-space raycasting (tap-to-interact, aim
  * reticle) straightforward.
  */
-function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, down, eyeHeightM, pitchDeg, onTapRungent }: Props) {
+function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, down, eyeHeightM, pitchDeg, label, distanceM, onTapRungent }: Props) {
   const worldRef = useRef<THREE.Group>(null);
   const pitchRef = useRef<THREE.Group>(null);
   const smoothPos = useRef<{ x: number; y: number; z: number } | null>(null);
@@ -74,6 +76,8 @@ function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, d
             mode={mode}
             locked={locked}
             down={down}
+            label={label}
+            distanceM={distanceM}
             onTap={onTapRungent}
           />
         )}
