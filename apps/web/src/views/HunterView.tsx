@@ -91,6 +91,11 @@ export function HunterView({ onBack, legId }: Props) {
   const [lockProgress, setLockProgress] = useState(0);
   const [catchProgress, setCatchProgress] = useState(0);
   const [burst, setBurst] = useState(false);
+  const [screenPos, setScreenPos] = useState<{
+    xPct: number;
+    yPct: number;
+    onScreen: boolean;
+  } | null>(null);
   const [arming, setArming] = useState(false);
   const [armError, setArmError] = useState<string | null>(null);
 
@@ -330,6 +335,7 @@ export function HunterView({ onBack, legId }: Props) {
         down={rungent?.status === "down"}
         eyeHeightM={camHeight}
         pitchDeg={camPitch}
+        onScreenPos={setScreenPos}
         onTapRungent={() => setSpeech("You found me. That was the easy part.")}
       />
       <HUD
@@ -350,6 +356,42 @@ export function HunterView({ onBack, legId }: Props) {
         onCatchEnd={handleCatchEnd}
       />
       <DownBurst active={burst} />
+      {screenPos && rungent?.status !== "down" && (
+        <div
+          style={{
+            position: "fixed",
+            left: `${Math.min(96, Math.max(4, screenPos.xPct))}%`,
+            top: `${Math.min(92, Math.max(8, screenPos.yPct))}%`,
+            transform: "translate(-50%, -50%)",
+            zIndex: 24,
+            pointerEvents: "none",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              width: screenPos.onScreen ? 44 : 30,
+              height: screenPos.onScreen ? 44 : 30,
+              margin: "0 auto",
+              borderRadius: "50%",
+              border: `2px solid ${locked ? "#FFB020" : "#00FF6A"}`,
+              boxShadow: `0 0 12px ${locked ? "#FFB020" : "#00FF6A"}`,
+              opacity: screenPos.onScreen ? 0.85 : 0.5,
+            }}
+          />
+          <div
+            style={{
+              marginTop: 3,
+              font: "11px/1 monospace",
+              color: locked ? "#FFB020" : "#00FF6A",
+              textShadow: "0 0 4px #000, 0 0 4px #000",
+            }}
+          >
+            {rungent?.distance_m != null ? `${Math.round(rungent.distance_m)}m` : ""}
+            {!screenPos.onScreen && " \u2192 turn"}
+          </div>
+        </div>
+      )}
       {new URLSearchParams(window.location.search).has("debug") && (
         <pre
           style={{

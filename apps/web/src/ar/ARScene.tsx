@@ -17,6 +17,12 @@ interface Props {
   eyeHeightM: number;
   /** Downward tilt of the camera, positive when looking down at the street. */
   pitchDeg: number;
+  /**
+   * Where the Rungent lands on screen, so the DOM can draw a marker for it.
+   * At the far end of engagement range the figure is only a few pixels tall
+   * and is effectively impossible to find by eye.
+   */
+  onScreenPos?: (p: { xPct: number; yPct: number; onScreen: boolean } | null) => void;
   onTapRungent: () => void;
 }
 
@@ -26,20 +32,48 @@ interface Props {
  * at identity, which makes screen-space raycasting (tap-to-interact, aim
  * reticle) straightforward.
  */
-function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, down, eyeHeightM, pitchDeg, onTapRungent }: Props) {
+function World({ hunter, headingDeg, rungent, rungentHeadingDeg, mode, locked, down, eyeHeightM, pitchDeg, onScreenPos, onTapRungent }: Props) {
   const worldRef = useRef<THREE.Group>(null);
   const pitchRef = useRef<THREE.Group>(null);
   const smoothPos = useRef<{ x: number; y: number; z: number } | null>(null);
+  const projected = useRef(new THREE.Vector3());
+  const lastReport = useRef(0);
 
   const placement = rungent ? geoToScene(hunter, rungent, eyeHeightM) : null;
   const scenePos = placement
     ? { x: placement.x, y: placement.y, z: placement.z }
     : null;
 
-  useFrame((_, dt) => {
+  useFrame(({ camera }, dt) => {
     if (pitchRef.current) {
       // Tilting the world up is what a camera angled down at the street sees.
       pitchRef.current.rotation.x = (pitchDeg * Math.PI) / 180;
+    }
+    if (onScreenPos && worldRef.current && pitchRef.current) {
+      const now = performance.now();
+      // Throttled: this drives React state, and a per-frame update would
+      // re-render the whole HUD sixty times a second for no visible gain.
+      if (now - lastReport.current > 80) {
+        lastReport.current = now;
+        const p = smoothPos.current;
+        if (!p) {
+          onScreenPos(null);
+        } else {
+          // Mirror the group nesting: heading inside, pitch outside.
+          projected.current.set(p.x, p.y + 1.0, p.z);
+          projected.current.applyEuler(new THREE.Euler(0, worldRef.current.rotation.y, 0));
+          projected.current.applyEuler(new THREE.Euler(pitchRef.current.rotation.x, 0, 0));
+          projected.current.project(camera);
+          const behind = projected.current.z > 1;
+          const xPct = ((projected.current.x + 1) / 2) * 100;
+          const yPct = ((1 - projected.current.y) / 2) * 100;
+          onScreenPos({
+            xPct: behind ? 100 - xPct : xPct,
+            yPct,
+            onScreen: !behind && xPct > 2 && xPct < 98 && yPct > 2 && yPct < 98,
+          });
+        }
+      }
     }
     if (worldRef.current) {
       const target = headingToWorldRotation(headingDeg);
