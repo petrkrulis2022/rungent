@@ -1,6 +1,6 @@
 import { useRef, useMemo, useEffect, useState, Suspense } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useGLTF, useAnimations, Text, Billboard } from "@react-three/drei";
+import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
 
 /**
@@ -168,8 +168,6 @@ interface RungentProps {
   mode: "idle" | "walk" | "run";
   locked?: boolean;
   down?: boolean;
-  label?: string;
-  distanceM?: number | null;
   onTap?: () => void;
 }
 
@@ -240,16 +238,7 @@ function GltfRunner({
   );
 }
 
-export function Rungent({
-  position,
-  headingDeg,
-  mode,
-  locked,
-  down,
-  label,
-  distanceM,
-  onTap,
-}: RungentProps) {
+export function Rungent({ position, headingDeg, mode, locked, down, onTap }: RungentProps) {
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
 
@@ -262,10 +251,10 @@ export function Rungent({
     };
   }, [hovered]);
 
-  // Labels are sized in world units, so they would shrink into nothing at the
-  // far edge of engagement range. Growing them with distance keeps them legible
-  // and doubles as a marker for a Rungent too small to pick out by eye.
-  const labelScale = Math.max(1, (distanceM ?? 10) / 14);
+  // Name and distance are drawn in the DOM HUD rather than in the canvas:
+  // in-scene text needs a WebGL SDF generator that requires
+  // ANGLE_instanced_arrays, and losing that extension takes the whole scene
+  // down -- camera feed included -- rather than just the label.
   const material = useHologramMaterial(down ? "#FF2E9A" : "#00FF6A", locked ? "#FFB020" : "#00E5FF");
 
   useFrame((state, dt) => {
@@ -305,33 +294,6 @@ export function Rungent({
       }}
       onPointerOut={() => setHovered(false)}
     >
-      <Billboard position={[0, 2.1, 0]} scale={labelScale}>
-        {distanceM != null && (
-          <Text
-            fontSize={0.24}
-            color={locked ? "#FFB020" : "#00E5FF"}
-            outlineWidth={0.03}
-            outlineColor="#07090c"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {`${Math.round(distanceM)}m`}
-          </Text>
-        )}
-        {hovered && label && (
-          <Text
-            position={[0, 0.32, 0]}
-            fontSize={0.2}
-            color="#ffffff"
-            outlineWidth={0.03}
-            outlineColor="#07090c"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {label}
-          </Text>
-        )}
-      </Billboard>
       <Suspense fallback={<ProceduralRunner material={material} mode={down ? "idle" : mode} />}>
         {MODEL_URL ? (
           <GltfRunner
