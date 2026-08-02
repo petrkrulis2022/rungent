@@ -15,6 +15,7 @@ import {
 } from "../lib/rungentClient";
 import { SHOOT_LOCK_RANGE_M, SHOOT_LOCK_MS, CATCH_HOLD_MS, ENGAGEMENT_RANGE_M, haversineMeters } from "@rundown/shared";
 import { Minimap } from "../ar/Minimap";
+import { CanvasBoundary } from "../ar/CanvasBoundary";
 
 /** Compass bearing from a to b, in degrees clockwise from true north. */
 function bearingDeg(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
@@ -97,6 +98,7 @@ export function HunterView({ onBack, legId }: Props) {
     yPct: number;
     onScreen: boolean;
   } | null>(null);
+  const [frameTick, setFrameTick] = useState(0);
   const [arming, setArming] = useState(false);
   const [armError, setArmError] = useState<string | null>(null);
 
@@ -335,6 +337,7 @@ export function HunterView({ onBack, legId }: Props) {
   // carried forward on the device's relative rotation, which knows nothing of
   // north but tracks turning accurately -- so the hunter pins the direction
   // once and can then turn on the spot as they would with a real compass.
+  const debugOn = new URLSearchParams(window.location.search).has("debug");
   const effectiveHeading =
     manualHeading === null
       ? hasHeading
@@ -348,6 +351,7 @@ export function HunterView({ onBack, legId }: Props) {
   return (
     <>
       <CameraFeed onError={setCamError} />
+      <CanvasBoundary>
       <ARScene
         hunter={hunterPos}
         headingDeg={effectiveHeading}
@@ -358,9 +362,13 @@ export function HunterView({ onBack, legId }: Props) {
         down={rungent?.status === "down"}
         eyeHeightM={camHeight}
         pitchDeg={camPitch}
-        onScreenPos={setScreenPos}
+        onScreenPos={(p) => {
+          setScreenPos(p);
+          if (debugOn) setFrameTick((t) => t + 1);
+        }}
         onTapRungent={() => setSpeech("You found me. That was the easy part.")}
       />
+      </CanvasBoundary>
       <HUD
         distanceM={rungent?.distance_m ?? null}
         inRange={!!rungent?.in_range}
@@ -415,7 +423,7 @@ export function HunterView({ onBack, legId }: Props) {
           </div>
         </div>
       )}
-      {new URLSearchParams(window.location.search).has("debug") && (
+      {debugOn && (
         <pre
           style={{
             position: "fixed",
@@ -445,6 +453,8 @@ export function HunterView({ onBack, legId }: Props) {
             `inRange  ${rungent?.in_range ?? "-"}`,
             `dist     ${rungent?.distance_m?.toFixed(0) ?? "-"} m`,
             `bearing  ${aimTarget ? Math.round(bearingDeg(hunterPos, aimTarget)) : "-"}`,
+            `frames   ${frameTick}`,
+            `marker   ${screenPos ? `${screenPos.xPct.toFixed(0)},${screenPos.yPct.toFixed(0)} ${screenPos.onScreen ? "on" : "off"}` : "null"}`,
           ].join("\n")}
         </pre>
       )}
