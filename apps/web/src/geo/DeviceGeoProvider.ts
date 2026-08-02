@@ -68,16 +68,29 @@ export class DeviceGeoProvider implements GeoProvider {
     );
 
     this.orientationHandler = (e: DeviceOrientationEvent) => {
+      // Only absolute readings mean anything here. iOS exposes a true compass
+      // bearing; Android's plain `deviceorientation` alpha is measured from
+      // wherever the device happened to start, so treating it as north points
+      // the whole scene in an arbitrary direction and the Rungent is rendered
+      // somewhere off screen. Absolute alpha counts anticlockwise, hence 360-.
+      const webkit = (e as any).webkitCompassHeading;
+      const heading =
+        typeof webkit === "number" && !Number.isNaN(webkit)
+          ? webkit
+          : e.absolute && typeof e.alpha === "number"
+            ? (360 - e.alpha) % 360
+            : null;
+      if (heading === null) return;
       this.hasHeading = true;
-      // iOS Safari exposes true compass heading via webkitCompassHeading.
-      // Android exposes alpha (relative to device init, roughly usable for a demo).
-      const raw =
-        (e as any).webkitCompassHeading !== undefined
-          ? (e as any).webkitCompassHeading
-          : e.alpha ?? 0;
-      this.smoothedHeading = lowPassHeading(this.smoothedHeading, raw);
+      this.smoothedHeading = lowPassHeading(this.smoothedHeading, heading);
       this.emit();
     };
+    // Android only marks readings absolute on the dedicated event.
+    window.addEventListener(
+      "deviceorientationabsolute",
+      this.orientationHandler as EventListener,
+      true
+    );
     window.addEventListener(
       "deviceorientation",
       this.orientationHandler as EventListener,

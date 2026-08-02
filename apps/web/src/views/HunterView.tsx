@@ -340,6 +340,7 @@ export function HunterView({ onBack, legId }: Props) {
         down={rungent?.status === "down"}
         result={result}
         speech={speech}
+        onCloseSpeech={() => setSpeech(null)}
         onFire={() => submitTakedown("shoot")}
         onCatchStart={handleCatchStart}
         onCatchEnd={handleCatchEnd}

@@ -1,3 +1,4 @@
+import { CATCH_RANGE_M } from "@rundown/shared";
 import { useEffect, useRef, useState } from "react";
 
 export type TakedownResult = { ok: boolean; message: string; txHash?: string } | null;
@@ -14,6 +15,7 @@ interface HUDProps {
   down: boolean;
   result: TakedownResult;
   speech: string | null;
+  onCloseSpeech: () => void;
   onFire: () => void;
   onCatchStart: () => void;
   onCatchEnd: () => void;
@@ -32,12 +34,13 @@ export function HUD(props: HUDProps) {
     down,
     result,
     speech,
+    onCloseSpeech,
     onFire,
     onCatchStart,
     onCatchEnd,
   } = props;
 
-  const canCatch = inRange && distanceM !== null && distanceM <= 22;
+  const canCatch = inRange && distanceM !== null && distanceM <= CATCH_RANGE_M;
 
   return (
     <div style={S.root}>
@@ -116,7 +119,19 @@ export function HUD(props: HUDProps) {
       {/* speech bubble */}
       {speech && !down && (
         <div style={S.speech}>
-          <div style={S.speechName}>{rungentName}</div>
+          <div style={S.speechHead}>
+            <span style={S.speechName}>{rungentName}</span>
+            <button style={S.speechClose} onClick={onCloseSpeech} aria-label="Close">
+              &times;
+            </button>
+          </div>
+          <div style={S.speechMeta}>
+            {distanceM !== null ? `${Math.round(distanceM)} m away` : "distance unknown"}
+            {" \u00B7 "}
+            {prizeAmount} USDC
+            {" \u00B7 "}
+            {locked ? "LOCKED" : inRange ? "IN RANGE" : "NO CONTACT"}
+          </div>
           <div>{speech}</div>
         </div>
       )}
@@ -254,7 +269,9 @@ const S: Record<string, React.CSSProperties> = {
   },
   speech: {
     position: "absolute",
-    bottom: 190,
+    // clears the minimap and calibration panel stacked in the bottom-left
+    bottom: 345,
+    pointerEvents: "auto",
     left: 20,
     right: 20,
     background: "rgba(7,9,12,0.86)",
@@ -264,11 +281,32 @@ const S: Record<string, React.CSSProperties> = {
     fontSize: 13,
     lineHeight: 1.5,
   },
+  speechHead: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
   speechName: {
     color: "#00E5FF",
     fontSize: 10,
     letterSpacing: "0.2em",
     marginBottom: 4,
+  },
+  speechClose: {
+    background: "transparent",
+    border: "none",
+    color: "#8fa3a0",
+    fontSize: 20,
+    lineHeight: 1,
+    cursor: "pointer",
+    padding: "0 4px",
+  },
+  speechMeta: {
+    color: "#8fa3a0",
+    fontSize: 11,
+    fontFamily: "monospace",
+    marginBottom: 6,
   },
   result: {
     position: "absolute",
