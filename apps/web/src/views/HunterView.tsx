@@ -78,7 +78,7 @@ interface Props {
 
 export function HunterView({ onBack, legId }: Props) {
   const { address, connecting, error: walletError, connect } = useWallet();
-  const { sample, permissionGranted, requestPermission, provider, hasHeading } = useGeo();
+  const { sample, permissionGranted, requestPermission, provider, hasHeading, geoError } = useGeo();
 
   const [leg, setLeg] = useState<any>(null);
   const [legErr, setLegErr] = useState<string | null>(null);
@@ -91,6 +91,8 @@ export function HunterView({ onBack, legId }: Props) {
   const [lockProgress, setLockProgress] = useState(0);
   const [catchProgress, setCatchProgress] = useState(0);
   const [burst, setBurst] = useState(false);
+  const [arming, setArming] = useState(false);
+  const [armError, setArmError] = useState<string | null>(null);
 
   // A laptop has no compass, so nothing tells us which way the camera actually
   // points — assuming true north puts the Rungent at a fixed wrong angle (it
@@ -263,20 +265,35 @@ export function HunterView({ onBack, legId }: Props) {
           granted from a tap, which is what the button below is for.
         </p>
 
+        {armError && <p className="warn-banner">{armError}</p>}
+
         <button
           className="primary-btn"
           style={{ marginTop: 8 }}
-          disabled={!address || sameWallet || !legId}
+          disabled={!address || sameWallet || !legId || arming}
           onClick={async () => {
+            setArmError(null);
             if (provider.kind === "device" && !permissionGranted) {
+              // Waiting on a GPS fix can take many seconds, during which the
+              // button previously gave no sign it had been pressed at all.
+              setArming(true);
               const ok = await requestPermission();
-              if (!ok) return;
+              setArming(false);
+              if (!ok) {
+                setArmError(geoError ?? "Location or motion access was refused.");
+                return;
+              }
             }
             setArmed(true);
           }}
         >
-          START HUNT
+          {arming ? "Waiting for GPS..." : "START HUNT"}
         </button>
+
+        {!address && <p className="warn-banner">Connect a wallet first.</p>}
+        {!legId && (
+          <p className="warn-banner">No leg in the link, so there is nothing to hunt.</p>
+        )}
       </div>
     );
   }

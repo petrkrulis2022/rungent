@@ -17,6 +17,8 @@ export class DeviceGeoProvider implements GeoProvider {
   private smoothedHeading: number | null = null;
   private orientationHandler: ((e: DeviceOrientationEvent) => void) | null = null;
   public hasHeading = false;
+  /** Why the last permission request failed, for display on a phone. */
+  public lastError: string | null = null;
 
   async requestPermission(): Promise<boolean> {
     // iOS requires these to be called from a user gesture (a button tap).
@@ -27,17 +29,33 @@ export class DeviceGeoProvider implements GeoProvider {
         const res = await DOE.requestPermission();
         if (res !== "granted") return false;
       }
+      if (!navigator.geolocation) {
+        this.lastError =
+          "This browser exposes no geolocation. Open the link in Safari or Chrome rather than an in-app browser.";
+        return false;
+      }
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 10000,
+          // A cold GPS fix outdoors regularly takes longer than 10s, and a
+          // timeout here is indistinguishable from a dead button.
+          timeout: 25000,
         })
       );
       this.applyPosition(pos);
       this.startWatching();
       return true;
     } catch (err) {
-      console.error("[DeviceGeoProvider] permission denied", err);
+      const code = (err as GeolocationPositionError)?.code;
+      this.lastError =
+        code === 1
+          ? "Location permission was refused. Allow it for this site, then tap again."
+          : code === 2
+            ? "Position unavailable. Move somewhere with a clearer view of the sky."
+            : code === 3
+              ? "Timed out waiting for a GPS fix. Tap again, ideally outdoors."
+              : `Could not start location or motion access: ${(err as Error)?.message ?? err}`;
+      console.error("[DeviceGeoProvider] permission failed", err);
       return false;
     }
   }

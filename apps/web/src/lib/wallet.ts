@@ -10,9 +10,22 @@ export interface WalletState {
   error: string | null;
 }
 
+/**
+ * Development override: `?wallet=0x...` supplies an address without a signer.
+ *
+ * Mobile browsers force a choice -- a wallet's in-app browser injects an
+ * ethereum provider but commonly refuses geolocation, while Safari and Chrome
+ * allow GPS and camera but inject nothing. This unblocks testing the AR half
+ * in a real browser. Everything up to settlement works; signing does not.
+ */
+function devWalletOverride(): string | null {
+  const w = new URLSearchParams(window.location.search).get("wallet");
+  return w && /^0x[a-fA-F0-9]{40}$/.test(w) ? w : null;
+}
+
 export function useWallet() {
   const [state, setState] = useState<WalletState>({
-    address: null,
+    address: devWalletOverride(),
     connecting: false,
     error: null,
   });
