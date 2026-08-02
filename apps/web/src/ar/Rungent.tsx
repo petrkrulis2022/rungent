@@ -1,6 +1,20 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect, Suspense } from "react";
 import { useFrame } from "@react-three/fiber";
+import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
+
+/**
+ * Drop any rigged GLB in apps/web/public/models/ and point this at it; the
+ * procedural figure below is used whenever it is unset, so the game runs with
+ * no asset at all. Kept as config rather than an import so swapping the
+ * character never needs a code change.
+ */
+const MODEL_URL = (import.meta.env.VITE_RUNGENT_MODEL_URL as string | undefined) ?? "";
+/** Re-skin a downloaded model in the hologram shader instead of its own textures. */
+const HOLOGRAM_SKIN = import.meta.env.VITE_RUNGENT_HOLOGRAM === "1";
+const TARGET_HEIGHT_M = 1.8;
+
+if (MODEL_URL) useGLTF.preload(MODEL_URL);
 
 /**
  * The Rungent's holographic look.
@@ -150,6 +164,69 @@ interface RungentProps {
   onTap?: () => void;
 }
 
+/**
+ * A downloaded character — Mixamo, Quaternius, Ready Player Me and friends all
+ * export wildly different units (Mixamo is often centimetres) and clip names,
+ * so the model is scaled to a real human height rather than trusted, and the
+ * walk/run clips are matched by name. That way a new character is a file swap.
+ */
+function GltfRunner({
+  url,
+  mode,
+  skin,
+}: {
+  url: string;
+  mode: "idle" | "walk" | "run";
+  skin: THREE.ShaderMaterial | null;
+}) {
+  const group = useRef<THREE.Group>(null);
+  const { scene, animations } = useGLTF(url);
+  const { actions, names } = useAnimations(animations, group);
+
+  const scale = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(scene);
+    const h = box.max.y - box.min.y;
+    return h > 0 ? TARGET_HEIGHT_M / h : 1;
+  }, [scene]);
+
+  useEffect(() => {
+    if (!skin) return;
+    scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) m.material = skin;
+    });
+  }, [scene, skin]);
+
+  useEffect(() => {
+    if (names.length === 0) return;
+    const find = (want: string[]) =>
+      names.find((n) => want.some((w) => n.toLowerCase().includes(w)));
+    const runClip = find(["run", "jog", "sprint"]);
+    const walkClip = find(["walk"]);
+    const name =
+      mode === "run"
+        ? runClip ?? walkClip ?? names[0]
+        : mode === "walk"
+          ? walkClip ?? names[0]
+          : find(["idle", "stand"]) ?? walkClip ?? names[0];
+
+    const action = actions[name];
+    if (!action) return;
+    // a character that only ships a walk can still run, just faster
+    action.timeScale = mode === "run" && !runClip ? 1.8 : 1;
+    action.reset().fadeIn(0.2).play();
+    return () => {
+      action.fadeOut(0.2);
+    };
+  }, [actions, names, mode]);
+
+  return (
+    <group ref={group} scale={scale}>
+      <primitive object={scene} />
+    </group>
+  );
+}
+
 export function Rungent({ position, headingDeg, mode, locked, down, onTap }: RungentProps) {
   const groupRef = useRef<THREE.Group>(null);
   const material = useHologramMaterial(down ? "#FF2E9A" : "#00FF6A", locked ? "#FFB020" : "#00E5FF");
@@ -182,7 +259,17 @@ export function Rungent({ position, headingDeg, mode, locked, down, onTap }: Run
         onTap?.();
       }}
     >
-      <ProceduralRunner material={material} mode={down ? "idle" : mode} />
+      <Suspense fallback={<ProceduralRunner material={material} mode={down ? "idle" : mode} />}>
+        {MODEL_URL ? (
+          <GltfRunner
+            url={MODEL_URL}
+            mode={down ? "idle" : mode}
+            skin={HOLOGRAM_SKIN ? material : null}
+          />
+        ) : (
+          <ProceduralRunner material={material} mode={down ? "idle" : mode} />
+        )}
+      </Suspense>
       {/* soft contact shadow / ground glow */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
         <circleGeometry args={[0.5, 24]} />
